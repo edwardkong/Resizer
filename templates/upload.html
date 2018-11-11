@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
+	<h1>Upload</h1>
 	<form method="POST" action="{{url_for('uploader')}}" enctype="multipart/form-data" class="form-inline justify-content-center">
 		<div class="form-group">
 			<input name="filename" type="file" class="form-control">
