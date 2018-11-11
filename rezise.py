@@ -6,11 +6,9 @@ import random
 import pymongo
 from pymongo import MongoClient
 from werkzeug.utils import secure_filename
-from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory, session
+from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory
 from PIL import Image, ImageDraw
 # from flask_pymongo import PyMongo
-
-active = []
 
 client = MongoClient()
 db = client['squarify']
@@ -62,7 +60,7 @@ def loadResult(filename):
 
 @app.route('/uploader', methods=['GET', 'POST'])
 def uploader():
-	if request.method == 'POST' and session["token"] in active:
+	if request.method == 'POST':
 		print "POST Request"
 		print request.files
 		# check if the post request has the file part
@@ -126,8 +124,6 @@ def login():
 		fullStr = checkUname + formatPass + toCheck["salt"]
 		newhash = hashlib.sha256(fullStr).hexdigest()
 		if(newhash == toCheck["hash"]):
-			session['token'] = newhash
-			active.append(newhash)
 			return redirect(url_for('upload'))
 		return "Sorry, login has failed. Please check your credentials."
 	return redirect(url_for('index'))
