@@ -6,7 +6,7 @@ import random
 import pymongo
 from pymongo import MongoClient
 from werkzeug.utils import secure_filename
-from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory
+from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory, session
 from PIL import Image, ImageDraw
 # from flask_pymongo import PyMongo
 
@@ -77,12 +77,12 @@ def uploader():
 			return redirect(request.url)
 		if file and allowed_file(file.filename):
 			print "accepted image"
-			filename = secure_filename(file.filename)
+			filename = session.get('uname')+secure_filename(file.filename)
 			file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 			print "Upload original Successful"
-			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+filename))
+			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+session.get('uname')+filename))
 			print "Upload resize Successful"
-			return redirect(url_for('loadResult',filename="new"+filename))
+			return redirect(url_for('loadResult',filename="new"+session.get('uname')+filename))
 	print "GET Request"
 	return redirect(url_for('upload'))
 
@@ -92,6 +92,9 @@ def index():
 
 @app.route("/upload")
 def upload():
+	if session.get('uname') == None:
+		print "not logged in, redirect"
+		return redirect(url_for('index'))	
 	return render_template("upload.html")
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -124,9 +127,17 @@ def login():
 		fullStr = checkUname + formatPass + toCheck["salt"]
 		newhash = hashlib.sha256(fullStr).hexdigest()
 		if(newhash == toCheck["hash"]):
+			session['uname'] = checkUname;
 			return redirect(url_for('upload'))
 		return "Sorry, login has failed. Please check your credentials."
 	return redirect(url_for('index'))
+
+@app.route('/logout')
+def logout():
+	if session.get('uname') != True:
+		print "logged out"
+		session.pop('uname', None)
+	return redirect(url_for('index'))	
 
 if __name__ == '__main__':
     app.run(debug=True)
