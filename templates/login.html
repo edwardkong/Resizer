@@ -3,8 +3,8 @@
 	<h1>Register</h1>
 	<form method="POST" action="{{url_for('register')}}" enctype="multipart/form-data" class="form-inline justify-content-center">
 		<div class="form-group">
-			<input placeholder="username" name="uname" type="text" class="form-control"><br>
-			<input placeholder="password" name="pword" type="password" class="form-control">
+			<input placeholder="username" name="uname" type="text" class="form-control" required><br>
+			<input placeholder="password" name="pword" type="password" class="form-control" required>
 		</div>
 		<div class="form-group">	
 			<input type="submit" class="form-control">
@@ -13,8 +13,8 @@
     <h1>Login</h1>
 	<form method="POST" action="{{url_for('login')}}" enctype="multipart/form-data" class="form-inline justify-content-center">
 		<div class="form-group">
-			<input placeholder="username" name="uname" type="text" class="form-control"><br>
-			<input placeholder="password" name="pword" type="password" class="form-control">
+			<input placeholder="username" name="uname" type="text" class="form-control" required><br>
+			<input placeholder="password" name="pword" type="password" class="form-control" required>
 		</div>
 		<div class="form-group">	
 			<input type="submit" class="form-control">

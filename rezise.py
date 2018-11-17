@@ -4,11 +4,23 @@ import string
 import hashlib
 import random
 import pymongo
+import datetime
+import atexit
 from pymongo import MongoClient
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory, session
 from PIL import Image, ImageDraw
 # from flask_pymongo import PyMongo
+
+f = open("log.txt", "a+")
+
+def log(toLog):
+	f.write(str(datetime.datetime.now()) + " " + toLog + "\n")
+
+def saveLog():
+	f.close()
+
+atexit.register(saveLog)
 
 client = MongoClient()
 db = client['squarify']
@@ -80,9 +92,10 @@ def uploader():
 			filename = session.get('uname')+secure_filename(file.filename)
 			file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 			print "Upload original Successful"
-			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+session.get('uname')+filename))
+			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+filename))
 			print "Upload resize Successful"
-			return redirect(url_for('loadResult',filename="new"+session.get('uname')+filename))
+			log(request.remote_addr + " Upload successful: " + filename)
+			return redirect(url_for('loadResult',filename="new"+filename))
 	print "GET Request"
 	return redirect(url_for('upload'))
 
@@ -93,6 +106,7 @@ def index():
 @app.route("/upload")
 def upload():
 	if session.get('uname') == None:
+		log(request.remote_addr + " Invalid session")
 		print "not logged in, redirect"
 		return redirect(url_for('index'))	
 	return render_template("upload.html")
@@ -107,12 +121,14 @@ def register():
 		newhash = hashlib.sha256(fullStr).hexdigest()
 		if(users.find_one({"uname": checkUname}) == None):
 			tmp = {
-				"uname": request.form['uname'],
+				"uname": checkUname,
 				"hash": newhash,
 				"salt": salt
 			}
 			users.insert_one(tmp)
+			log(request.remote_addr + " Registration successful: " + checkUname)
 			return "Successfully register, please go back to login"
+		log(request.remote_addr + " Registration unsuccessful: " + checkUname)
 		return "Username already taken, please go back and try again"
 	return redirect(url_for('index'))
 
@@ -123,12 +139,15 @@ def login():
 	toCheck = users.find_one({"uname": checkUname})
 	if request.method == "POST":
 		if(toCheck == None):
+			log(request.remote_addr + " Login attempt, no username match: " + checkUname)
 			return "Sorry, login has failed. Please check your credentials."
 		fullStr = checkUname + formatPass + toCheck["salt"]
 		newhash = hashlib.sha256(fullStr).hexdigest()
 		if(newhash == toCheck["hash"]):
-			session['uname'] = checkUname;
+			session['uname'] = checkUname
+			log(request.remote_addr + " Login successful: " + checkUname)
 			return redirect(url_for('upload'))
+		log(request.remote_addr + " Login attempt, password mismatch: " + checkUname)
 		return "Sorry, login has failed. Please check your credentials."
 	return redirect(url_for('index'))
 
