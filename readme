@@ -1,0 +1,1 @@
+To run, install python flask and mongodb. Create database "squarify" and collection "Users". Leave default ports or specify port in "resize.py".
