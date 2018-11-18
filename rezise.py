@@ -12,11 +12,12 @@ from flask import Flask, render_template, flash, request, redirect, url_for, sen
 from PIL import Image, ImageDraw
 # from flask_pymongo import PyMongo
 
-f = open("log.txt", "a+")
+f = open("log.txt", "a")
 
 def log(toLog):
 	f.write(str(datetime.datetime.now()) + " " + toLog + "\n")
-
+	f.flush()
+	
 def saveLog():
 	f.close()
 
@@ -155,6 +156,7 @@ def login():
 def logout():
 	if session.get('uname') != True:
 		print "logged out"
+		log(request.remote_addr + " Logout successful: " + session.get('uname'))
 		session.pop('uname', None)
 	return redirect(url_for('index'))	
 
