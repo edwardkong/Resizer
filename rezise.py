@@ -15,6 +15,9 @@ from PIL import Image, ImageDraw
 
 f = open("log.txt", "a")
 
+def logHTTP(status):
+	print "%s - - [%s] %s %s %s %s -------" %(request.remote_addr, str(datetime.datetime.now()), request.method, request.scheme, request.full_path, status)
+
 def log(toLog):
 	f.write(str(datetime.datetime.now()) + " " + toLog + "\n")
 	f.flush()
@@ -80,6 +83,9 @@ def allowed_signature(fileBytes):
 	
 @app.route('/loadResult/<filename>')
 def loadResult(filename):
+	# need to check if user has access to photo
+	##
+	logHTTP("200 Resized")
 	print "Upload Successful"
 	print filename
 	return render_template("resized.html",imagesrc=filename)
@@ -92,6 +98,7 @@ def uploader():
 		# check if the post request has the file part
 		if 'filename' not in request.files:
 			print "invailid file"
+			logHTTP("400 Not valid file")
 			flash('No file part')
 			return redirect(request.url)
 		file = request.files['filename']
@@ -99,10 +106,12 @@ def uploader():
 		# submit an empty part without filename
 		if file.filename == '':
 			print "no selected file"
+			logHTTP("400 Not valid file")
 			flash('No selected file')
 			return redirect(request.url)
 		bytes = binascii.hexlify(file.read()).upper()
 		if not allowed_signature(bytes):
+			logHTTP("400 Not valid file")
 			flash('Incorrect File Format')
 			return redirect(request.url)
 		file.seek(0)
@@ -113,6 +122,7 @@ def uploader():
 			print "Upload original Successful"
 			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+filename))
 			print "Upload resize Successful"
+			logHTTP("200 Upload Successful")
 			log(request.remote_addr + " Upload successful: " + filename)
 			return redirect(url_for('loadResult',filename="new"+filename))
 	print "GET Request"
@@ -120,14 +130,21 @@ def uploader():
 
 @app.route("/")
 def index():
+	logHTTP("200")
 	return render_template("login.html")
 
 @app.route("/upload")
 def upload():
 	if session.get('uname') == None:
+		logHTTP("401 Not authorized")
 		log(request.remote_addr + " Invalid session")
 		print "not logged in, redirect"
 		return redirect(url_for('index'))	
+	logHTTP("200")
+	#adds session imgs
+	##
+	session['images'] = ["img1.png","img2.png","img3.png"]
+	# session.pop('images', None)
 	return render_template("upload.html")
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -147,9 +164,12 @@ def register():
 			users.insert_one(tmp)
 			log(request.remote_addr + " Registration successful: " + checkUname)
 			flash("User Successfully registered")
+			logHTTP("200 User Registered")
 			return redirect(url_for('index'))
+		logHTTP("302 Registration Unsuccessful")
 		log(request.remote_addr + " Registration unsuccessful: " + checkUname)
 		flash("Username already taken, please select a different username")
+		return redirect(url_for('index'))
 	return redirect(url_for('index'))
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -159,6 +179,7 @@ def login():
 	toCheck = users.find_one({"uname": checkUname})
 	if request.method == "POST":
 		if(toCheck == None):
+			logHTTP("302 Failed Login")
 			log(request.remote_addr + " Login attempt, no username match: " + checkUname)
 			flash("Sorry, login has failed. Please check your credentials.")
 			return redirect(url_for('index'))
@@ -166,8 +187,10 @@ def login():
 		newhash = hashlib.sha256(fullStr).hexdigest()
 		if(newhash == toCheck["hash"]):
 			session['uname'] = checkUname
+			logHTTP("200 Login Successful")
 			log(request.remote_addr + " Login successful: " + checkUname)
 			return redirect(url_for('upload'))
+		logHTTP("302 Failed Login")
 		log(request.remote_addr + " Login attempt, password mismatch: " + checkUname)
 		flash("Sorry, login has failed. Please check your credentials.")
 	return redirect(url_for('index'))
@@ -175,10 +198,16 @@ def login():
 @app.route('/logout')
 def logout():
 	if session.get('uname') != True:
+		logHTTP("200 Logged Out")
 		print "logged out"
 		log(request.remote_addr + " Logout successful: " + session.get('uname'))
 		session.pop('uname', None)
 	return redirect(url_for('index'))	
 
+@app.errorhandler(404)
+def page_not_found(e):
+	logHTTP("404 Not Found")
+	return render_template('404.html'), 404	
+	
 if __name__ == '__main__':
     app.run(debug=True)
