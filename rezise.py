@@ -83,7 +83,11 @@ def allowed_signature(fileBytes):
 	
 @app.route('/loadResult/<filename>')
 def loadResult(filename):
-	# need to check if user has access to photo
+	# check if user has access to photo
+	tmp = users.find_one({"uname": session.get('uname')})
+	if(filename in tmp['imgs']):
+		return redirect(url_for('upload'))
+
 	##
 	logHTTP("200 Resized")
 	print "Upload Successful"
@@ -121,6 +125,9 @@ def uploader():
 			file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 			print "Upload original Successful"
 			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+filename))
+			tmp = users.find_one({"uname": session.get('uname')})
+			tmp['imgs'].append("new"+filename)
+			users.update_one({"uname": session.get('uname')}, {"$set": tmp}, upsert=False)
 			print "Upload resize Successful"
 			logHTTP("200 Upload Successful")
 			log(request.remote_addr + " Upload successful: " + filename)
@@ -143,7 +150,8 @@ def upload():
 	logHTTP("200")
 	#adds session imgs
 	##
-	session['images'] = ["img1.png","img2.png","img3.png"]
+	tmp = users.find_one({"uname": session.get('uname')})
+	session['images'] = tmp['imgs']
 	# session.pop('images', None)
 	return render_template("upload.html")
 
@@ -159,7 +167,8 @@ def register():
 			tmp = {
 				"uname": checkUname,
 				"hash": newhash,
-				"salt": salt
+				"salt": salt,
+				"imgs": []
 			}
 			users.insert_one(tmp)
 			log(request.remote_addr + " Registration successful: " + checkUname)
