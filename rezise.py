@@ -6,6 +6,7 @@ import random
 import pymongo
 import datetime
 import atexit
+import binascii
 from pymongo import MongoClient
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory, session
@@ -65,6 +66,18 @@ def allowed_file(filename):
     return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def allowed_signature(fileBytes):			 
+	#gif
+	if fileBytes[:8] == "47494638":
+		return True
+	# jpg
+	if fileBytes[:8] == "FFD8FFDB" or fileBytes[:8] == "FFD8FFEE" or fileBytes[:8] == "FFD8FFE1" or fileBytes[:8] == "FFD8FFE0":
+		return True
+	# png
+	if fileBytes[:16] == "89504E470D0A1A0A":
+		return True
+	return False
+	
 @app.route('/loadResult/<filename>')
 def loadResult(filename):
 	print "Upload Successful"
@@ -88,6 +101,11 @@ def uploader():
 			print "no selected file"
 			flash('No selected file')
 			return redirect(request.url)
+		bytes = binascii.hexlify(file.read()).upper()
+		if not allowed_signature(bytes):
+			flash('Incorrect File Format')
+			return redirect(request.url)
+		file.seek(0)
 		if file and allowed_file(file.filename):
 			print "accepted image"
 			filename = session.get('uname')+secure_filename(file.filename)
@@ -128,9 +146,10 @@ def register():
 			}
 			users.insert_one(tmp)
 			log(request.remote_addr + " Registration successful: " + checkUname)
-			return "Successfully register, please go back to login"
+			flash("User Successfully registered")
+			return redirect(url_for('index'))
 		log(request.remote_addr + " Registration unsuccessful: " + checkUname)
-		return "Username already taken, please go back and try again"
+		flash("Username already taken, please select a different username")
 	return redirect(url_for('index'))
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -141,7 +160,8 @@ def login():
 	if request.method == "POST":
 		if(toCheck == None):
 			log(request.remote_addr + " Login attempt, no username match: " + checkUname)
-			return "Sorry, login has failed. Please check your credentials."
+			flash("Sorry, login has failed. Please check your credentials.")
+			return redirect(url_for('index'))
 		fullStr = checkUname + formatPass + toCheck["salt"]
 		newhash = hashlib.sha256(fullStr).hexdigest()
 		if(newhash == toCheck["hash"]):
@@ -149,7 +169,7 @@ def login():
 			log(request.remote_addr + " Login successful: " + checkUname)
 			return redirect(url_for('upload'))
 		log(request.remote_addr + " Login attempt, password mismatch: " + checkUname)
-		return "Sorry, login has failed. Please check your credentials."
+		flash("Sorry, login has failed. Please check your credentials.")
 	return redirect(url_for('index'))
 
 @app.route('/logout')

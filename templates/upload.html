@@ -1,5 +1,15 @@
 {% extends "layout.html" %}
 {% block content %}
+	{% with messages = get_flashed_messages() %}
+	  {% if messages %}
+	    {% for message in messages %}
+		  <div class="alert alert-warning alert-dismissible" role="alert">
+		  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+			{{message}}
+		  </div>
+		{% endfor %}
+	  {% endif %}
+	{% endwith %}
 	<h3>Welcome, {{session['uname']}}</h3>
 	<h1>Upload</h1>
 	<form method="POST" action="{{url_for('uploader')}}" enctype="multipart/form-data" class="form-inline justify-content-center">
