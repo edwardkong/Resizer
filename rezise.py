@@ -164,22 +164,25 @@ def register():
 		formatPass = str(request.form['pword'])
 		fullStr = checkUname + formatPass + salt
 		newhash = hashlib.sha256(fullStr).hexdigest()
-		if(users.find_one({"uname": checkUname}) == None):
-			tmp = {
-				"uname": checkUname,
-				"hash": newhash,
-				"salt": salt,
-				"imgs": []
-			}
-			users.insert_one(tmp)
-			log("[" + request.remote_addr + "] Registration successful: " + checkUname)
-			flash("User Successfully registered")
-			logHTTP("200 User Registered")
+		if(checkUname.isalnum() and len(checkUname) <= 32 and len(formatPass) <= 32 and len(checkUname) >= 4 and len(formatPass) >= 4):
+			if(users.find_one({"uname": checkUname}) == None):
+				tmp = {
+					"uname": checkUname,
+					"hash": newhash,
+					"salt": salt,
+					"imgs": []
+				}
+				users.insert_one(tmp)
+				log("[" + request.remote_addr + "] Registration successful: " + checkUname)
+				flash("User Successfully registered")
+				logHTTP("200 User Registered")
+				return redirect(url_for('index'))
+			logHTTP("302 Registration Unsuccessful")
+			log("[" + request.remote_addr + "] Registration unsuccessful, username taken: " + checkUname)
+			flash("Username already taken, please select a different username")
 			return redirect(url_for('index'))
-		logHTTP("302 Registration Unsuccessful")
-		log("[" + request.remote_addr + "] Registration unsuccessful: " + checkUname)
-		flash("Username already taken, please select a different username")
-		return redirect(url_for('index'))
+		log("[" + request.remote_addr + "] Registration unsuccessful, incorrect format: " + checkUname)
+		flash("Please fix input formatting (only alphanumeric and less than 32 characters")
 	return redirect(url_for('index'))
 
 @app.route("/login", methods=['GET', 'POST'])
