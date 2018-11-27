@@ -85,7 +85,7 @@ def allowed_signature(fileBytes):
 def loadResult(filename):
 	# check if user has access to photo
 	tmp = users.find_one({"uname": session.get('uname')})
-	if(filename in tmp['imgs']):
+	if(filename not in tmp['imgs']):
 		return redirect(url_for('upload'))
 
 	##
