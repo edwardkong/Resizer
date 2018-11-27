@@ -16,7 +16,8 @@ from PIL import Image, ImageDraw
 f = open("log.txt", "a")
 
 def logHTTP(status):
-	print "%s - - [%s] %s %s %s %s -------" %(request.remote_addr, str(datetime.datetime.now()), request.method, request.scheme, request.full_path, status)
+	f.write("%s [%s] %s %s %s %s %s \n" %(str(datetime.datetime.now()), request.remote_addr, request.method, request.scheme, request.full_path, status, session.get('uname')))
+	f.flush()
 
 def log(toLog):
 	f.write(str(datetime.datetime.now()) + " " + toLog + "\n")
@@ -130,7 +131,7 @@ def uploader():
 			users.update_one({"uname": session.get('uname')}, {"$set": tmp}, upsert=False)
 			print "Upload resize Successful"
 			logHTTP("200 Upload Successful")
-			log(request.remote_addr + " Upload successful: " + filename)
+			log("[" + request.remote_addr + "] Upload successful: " + filename)
 			return redirect(url_for('loadResult',filename="new"+filename))
 	print "GET Request"
 	return redirect(url_for('upload'))
@@ -144,7 +145,7 @@ def index():
 def upload():
 	if session.get('uname') == None:
 		logHTTP("401 Not authorized")
-		log(request.remote_addr + " Invalid session")
+		log("[" + request.remote_addr + "] Invalid session")
 		print "not logged in, redirect"
 		return redirect(url_for('index'))	
 	logHTTP("200")
@@ -171,12 +172,12 @@ def register():
 				"imgs": []
 			}
 			users.insert_one(tmp)
-			log(request.remote_addr + " Registration successful: " + checkUname)
+			log("[" + request.remote_addr + "] Registration successful: " + checkUname)
 			flash("User Successfully registered")
 			logHTTP("200 User Registered")
 			return redirect(url_for('index'))
 		logHTTP("302 Registration Unsuccessful")
-		log(request.remote_addr + " Registration unsuccessful: " + checkUname)
+		log("[" + request.remote_addr + "] Registration unsuccessful: " + checkUname)
 		flash("Username already taken, please select a different username")
 		return redirect(url_for('index'))
 	return redirect(url_for('index'))
@@ -189,7 +190,7 @@ def login():
 	if request.method == "POST":
 		if(toCheck == None):
 			logHTTP("302 Failed Login")
-			log(request.remote_addr + " Login attempt, no username match: " + checkUname)
+			log("[" + request.remote_addr + "] Login attempt, no username match: " + checkUname)
 			flash("Sorry, login has failed. Please check your credentials.")
 			return redirect(url_for('index'))
 		fullStr = checkUname + formatPass + toCheck["salt"]
@@ -197,10 +198,10 @@ def login():
 		if(newhash == toCheck["hash"]):
 			session['uname'] = checkUname
 			logHTTP("200 Login Successful")
-			log(request.remote_addr + " Login successful: " + checkUname)
+			log("[" + request.remote_addr + "] Login successful: " + checkUname)
 			return redirect(url_for('upload'))
 		logHTTP("302 Failed Login")
-		log(request.remote_addr + " Login attempt, password mismatch: " + checkUname)
+		log("[" +request.remote_addr + "] Login attempt, password mismatch: " + checkUname)
 		flash("Sorry, login has failed. Please check your credentials.")
 	return redirect(url_for('index'))
 
@@ -209,7 +210,7 @@ def logout():
 	if session.get('uname') != True:
 		logHTTP("200 Logged Out")
 		print "logged out"
-		log(request.remote_addr + " Logout successful: " + session.get('uname'))
+		log("[" +request.remote_addr + "] Logout successful: " + session.get('uname'))
 		session.pop('uname', None)
 	return redirect(url_for('index'))	
 
