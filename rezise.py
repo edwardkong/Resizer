@@ -16,7 +16,10 @@ from PIL import Image, ImageDraw
 f = open("log.txt", "a")
 
 def logHTTP(status):
-	f.write("%s [%s] %s %s %s %s %s \n" %(str(datetime.datetime.now()), request.remote_addr, request.method, request.scheme, request.full_path, status, session.get('uname')))
+	if session.get('uname') == None:
+		f.write("%s [%s] %s %s %s %s \n" %(str(datetime.datetime.now()), request.remote_addr, request.method, request.scheme, request.full_path, status))
+	else:
+		f.write("%s [%s] %s %s %s %s %s \n" %(str(datetime.datetime.now()), request.remote_addr, request.method, request.scheme, request.full_path, status, session.get('uname')))
 	f.flush()
 
 def log(toLog):
@@ -87,6 +90,7 @@ def loadResult(filename):
 	# check if user has access to photo
 	tmp = users.find_one({"uname": session.get('uname')})
 	if(filename not in tmp['imgs']):
+		logHTTP("401 Access Forbidden: " + filename)
 		return redirect(url_for('upload'))
 
 	##
@@ -125,14 +129,14 @@ def uploader():
 			filename = session.get('uname')+secure_filename(file.filename)
 			file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 			print "Upload original Successful"
-			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],"new"+filename))
+			squarify(filename).save(os.path.join(app.config['UPLOAD_FOLDER'],session.get('uname')+"_"+filename))
 			tmp = users.find_one({"uname": session.get('uname')})
-			tmp['imgs'].append("new"+filename)
+			tmp['imgs'].append(session.get('uname')+"_"+filename)
 			users.update_one({"uname": session.get('uname')}, {"$set": tmp}, upsert=False)
 			print "Upload resize Successful"
 			logHTTP("200 Upload Successful")
-			log("[" + request.remote_addr + "] Upload successful: " + filename)
-			return redirect(url_for('loadResult',filename="new"+filename))
+			log("[" + request.remote_addr + "] Upload successful: " + filename + session.get('uname'))
+			return redirect(url_for('loadResult',filename=session.get('uname')+"_"+filename))
 	print "GET Request"
 	return redirect(url_for('upload'))
 
@@ -175,7 +179,7 @@ def register():
 				users.insert_one(tmp)
 				log("[" + request.remote_addr + "] Registration successful: " + checkUname)
 				flash("User Successfully registered")
-				logHTTP("200 User Registered")
+				logHTTP("200 User Registered: " + checkUname)
 				return redirect(url_for('index'))
 			logHTTP("302 Registration Unsuccessful")
 			log("[" + request.remote_addr + "] Registration unsuccessful, username taken: " + checkUname)
@@ -192,7 +196,7 @@ def login():
 	toCheck = users.find_one({"uname": checkUname})
 	if request.method == "POST":
 		if(toCheck == None):
-			logHTTP("302 Failed Login")
+			logHTTP("302 Failed Login " + checkUname)
 			log("[" + request.remote_addr + "] Login attempt, no username match: " + checkUname)
 			flash("Sorry, login has failed. Please check your credentials.")
 			return redirect(url_for('index'))
@@ -203,7 +207,7 @@ def login():
 			logHTTP("200 Login Successful")
 			log("[" + request.remote_addr + "] Login successful: " + checkUname)
 			return redirect(url_for('upload'))
-		logHTTP("302 Failed Login")
+		logHTTP("302 Failed Login " + checkUname)
 		log("[" +request.remote_addr + "] Login attempt, password mismatch: " + checkUname)
 		flash("Sorry, login has failed. Please check your credentials.")
 	return redirect(url_for('index'))
