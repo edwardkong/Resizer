@@ -1,3 +1,5 @@
 .vscode/
 uploads/
 log.txt
+protected/
+static/

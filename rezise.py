@@ -11,6 +11,7 @@ from pymongo import MongoClient
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, flash, request, redirect, url_for, send_file, send_from_directory, session
 from PIL import Image, ImageDraw
+from functools import wraps
 # from flask_pymongo import PyMongo
 
 f = open("log.txt", "a")
@@ -35,10 +36,10 @@ client = MongoClient()
 db = client['squarify']
 users = db['Users']
 
-UPLOAD_FOLDER = 'static'
+UPLOAD_FOLDER = 'protected'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
-app = Flask(__name__)
+app = Flask(__name__, instance_path='/protected')
 # app.config["MONGO_URI"] = "mongodb://localhost:27017/squarify"
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = "Plaintext_Secret_Key"
@@ -226,5 +227,32 @@ def page_not_found(e):
 	logHTTP("404 Not Found")
 	return render_template('404.html'), 404	
 	
+def special_requirement(f):
+	@wraps(f)
+	def wrap(*args, **kwargs):
+		try:
+			if 'test' == session['uname']:
+				return f(*args, **kwargs)
+			else:
+				return redirect(url_for('upload'))
+		except:
+			return redirect(url_for('index'))
+	return wrap	
+	
+@app.route('/protected/<path:filename>')
+@special_requirement
+def protected(filename):
+	tmp = users.find_one({"uname": session.get('uname')})
+	if(filename not in tmp['imgs']):
+		logHTTP("401 Access Forbidden: " + filename)
+		return redirect(url_for('upload'))
+	try:
+		return send_from_directory(
+			"protected",filename
+		)
+	except:
+		return redirect(url_for('upload'))	
+	
 if __name__ == '__main__':
+    # app.run()
     app.run(debug=True)

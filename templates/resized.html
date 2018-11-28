@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 	<h1>Here is your image</h1>
-	<img src = "{{url_for('static', filename=imagesrc)}}">	
+	<img src = "{{url_for('protected', filename=imagesrc)}}">	
 	<br />
 	<a href="{{url_for('upload')}}">Resize another</a>
 	<br />
