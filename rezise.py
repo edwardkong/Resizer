@@ -45,6 +45,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = "Plaintext_Secret_Key"
 # app.config['APP_ROOT'] = os.path.dirname(os.path.abspath(__file__))
 
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
+)
+
 newW=240
 newH=240
 def squarify(filename):
@@ -86,7 +91,20 @@ def allowed_signature(fileBytes):
 		return True
 	return False
 	
+def loginRequired(f):
+	@wraps(f)
+	def wrap(*args, **kwargs):
+		try:
+			if session.get('uname') != None:
+				return f(*args, **kwargs)
+			else:
+				return redirect(url_for('index'))
+		except:
+			return redirect(url_for('index'))
+	return wrap		
+	
 @app.route('/loadResult/<filename>')
+@loginRequired
 def loadResult(filename):
 	# check if user has access to photo
 	tmp = users.find_one({"uname": session.get('uname')})
@@ -101,6 +119,7 @@ def loadResult(filename):
 	return render_template("resized.html",imagesrc=filename)
 
 @app.route('/uploader', methods=['GET', 'POST'])
+@loginRequired
 def uploader():
 	if request.method == 'POST':
 		print "POST Request"
@@ -143,10 +162,10 @@ def uploader():
 
 @app.route("/")
 def index():
-	logHTTP("200")
 	return render_template("login.html")
 
 @app.route("/upload")
+@loginRequired
 def upload():
 	if session.get('uname') == None:
 		logHTTP("401 Not authorized")
@@ -192,7 +211,7 @@ def register():
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
-	checkUname = str(request.form['uname'])
+	checkUname = str(request.form['uname']) #auto check logout
 	formatPass = str(request.form['pword'])
 	toCheck = users.find_one({"uname": checkUname})
 	if request.method == "POST":
@@ -214,6 +233,7 @@ def login():
 	return redirect(url_for('index'))
 
 @app.route('/logout')
+@loginRequired
 def logout():
 	if session.get('uname') != True:
 		logHTTP("200 Logged Out")
@@ -231,7 +251,7 @@ def special_requirement(f):
 	@wraps(f)
 	def wrap(*args, **kwargs):
 		try:
-			if 'test' == session['uname']:
+			if session.get('uname') != None:
 				return f(*args, **kwargs)
 			else:
 				return redirect(url_for('upload'))
@@ -244,6 +264,7 @@ def special_requirement(f):
 def protected(filename):
 	tmp = users.find_one({"uname": session.get('uname')})
 	if(filename not in tmp['imgs']):
+		print "no access " + filename 
 		logHTTP("401 Access Forbidden: " + filename)
 		return redirect(url_for('upload'))
 	try:
@@ -252,7 +273,15 @@ def protected(filename):
 		)
 	except:
 		return redirect(url_for('upload'))	
-	
+		
+@app.after_request
+def apply_caching(response):
+	response.headers['X-Content-Type-Options'] = 'nosniff' 
+	response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+	response.headers['X-XSS-Protection'] = '1; mode=block' 
+	return response
+		
 if __name__ == '__main__':
-    # app.run()
+    #app.run()
     app.run(debug=True)
+
