@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+	<b>Your past squared images:</b>
+  {% if myList == [] %}
+  <b>You don't have any!</b>
+  {% endif %}
+  {% for item in myList %}
+	<img src = "{{url_for('static', filename=item)}}">
+  {% endfor %}
+	<br />
+	<a href="{{url_for('upload')}}">Upload another</a>
+	<br />
+	<a href="{{url_for('logout')}}">Log Out</a>
+{% endblock content %}
