@@ -1,0 +1,8 @@
+First make a virual environment:
+python3 -m rzenv rzenv
+source rzenv/bin/activate
+
+Install dependencies
+
+Run:
+python3 resize.py
